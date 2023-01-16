@@ -3,6 +3,7 @@ package com.varun.db;
 import com.varun.db.command.Command;
 import com.varun.db.command.CommandFactory;
 import com.varun.db.exception.InvalidCommandException;
+import com.varun.db.storage.KeyValueStore;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -13,21 +14,22 @@ import java.net.ServerSocket;
 public class DbServer {
 
     private final int port;
-    private BufferedReader reader;
+    private final BufferedReader reader;
     private final KeyValueStore keyValueStore;
 
-    public DbServer(int port) {
+    public DbServer(int port) throws IOException {
         this.port = port;
         this.reader = new BufferedReader(new InputStreamReader(System.in));
         this.keyValueStore = new KeyValueStore();
+        this.keyValueStore.rebuild();
     }
 
     public void start() throws IOException {
-        try (ServerSocket serverSocket = new ServerSocket(port)) {
+        try (ServerSocket ignored = new ServerSocket(port)) {
             while (true) {
                 String input = reader.readLine();
                 Command command = CommandFactory.parseCommand(input);
-                command.execute();
+                command.execute(keyValueStore);
             }
         } catch (InvalidCommandException e) {
             throw new RuntimeException(e);
