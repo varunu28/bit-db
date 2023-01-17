@@ -16,7 +16,7 @@ import static org.junit.Assert.*;
 
 public class FileSystemUtilTest {
 
-    private static final String TEST_DIR = "test_dir";
+    private static final String TEST_DIR = "test-dir";
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     @Before
@@ -29,6 +29,7 @@ public class FileSystemUtilTest {
     public void tearDown() {
         Arrays.stream(Objects.requireNonNull(new File(TEST_DIR).listFiles()))
                 .forEach(File::delete);
+        new File(TEST_DIR).delete();
     }
 
     @Test

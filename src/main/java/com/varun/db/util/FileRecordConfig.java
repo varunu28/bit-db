@@ -16,6 +16,12 @@ public class FileRecordConfig {
 
     public static final int KEY_OFFSET = 16;
 
+    public static final String FILE_PREFIX = "file_";
+
+    public static final String DB_DIRECTORY = "bit-db";
+
+    public static final long FILE_MEMORY_THRESHOLD = 8000L;
+
     private FileRecordConfig() {
     }
 }

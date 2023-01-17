@@ -3,22 +3,23 @@ package com.varun.db.storage;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import static com.varun.db.util.FileRecordConfig.*;
 
-public record FileRecord(long timestamp, int keySize, int valueSize, String key, String value, int valuePosition) {
+public record FileRecord(long timestamp, int keySize, int valueSize, String key, String value) {
 
     public static FileRecord buildFileRecord(byte[] bytes) {
         long timestamp = parseTimestamp(bytes);
         int keySize = parseKeySize(bytes);
         int valueSize = parseValueSize(bytes);
         String key = parseKey(bytes, keySize);
-        int valuePosition = KEY_OFFSET + keySize;
-        String value = parseValue(bytes, valuePosition, valueSize);
+        String value = parseValue(bytes,/* valuePosition= */ KEY_OFFSET + keySize, valueSize);
 
-        return new FileRecord(timestamp, keySize, valueSize, key, value, valuePosition);
+        return new FileRecord(timestamp, keySize, valueSize, key, value);
     }
 
     private static long parseTimestamp(byte[] bytes) {
@@ -44,5 +45,19 @@ public record FileRecord(long timestamp, int keySize, int valueSize, String key,
     private static String parseValue(byte[] bytes, int valuePosition, int valueSize) {
         byte[] valueBytes = Arrays.copyOfRange(bytes, valuePosition, valuePosition + valueSize);
         return new String(valueBytes, StandardCharsets.UTF_8);
+    }
+
+    public int getValuePosition() {
+        return KEY_OFFSET + keySize;
+    }
+
+    public byte[] toBytes() throws IOException {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        outputStream.write(Longs.toByteArray(timestamp));
+        outputStream.write(Ints.toByteArray(keySize));
+        outputStream.write(Ints.toByteArray(valueSize));
+        outputStream.write(key.getBytes());
+        outputStream.write(value.getBytes());
+        return outputStream.toByteArray();
     }
 }

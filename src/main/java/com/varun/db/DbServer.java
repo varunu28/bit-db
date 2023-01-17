@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 
+import static com.varun.db.util.FileRecordConfig.DB_DIRECTORY;
+
 @SuppressWarnings("InfiniteLoopStatement")
 public class DbServer {
 
@@ -20,7 +22,7 @@ public class DbServer {
     public DbServer(int port) throws IOException {
         this.port = port;
         this.reader = new BufferedReader(new InputStreamReader(System.in));
-        this.keyValueStore = new KeyValueStore();
+        this.keyValueStore = new KeyValueStore(DB_DIRECTORY);
         this.keyValueStore.rebuild();
     }
 
