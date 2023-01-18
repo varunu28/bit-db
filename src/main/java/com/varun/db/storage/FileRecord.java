@@ -47,10 +47,6 @@ public record FileRecord(long timestamp, int keySize, int valueSize, String key,
         return new String(valueBytes, StandardCharsets.UTF_8);
     }
 
-    public int getValuePosition() {
-        return KEY_OFFSET + keySize;
-    }
-
     public byte[] toBytes() throws IOException {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         outputStream.write(Longs.toByteArray(timestamp));

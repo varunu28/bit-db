@@ -23,7 +23,6 @@ public class DbServer {
         this.port = port;
         this.reader = new BufferedReader(new InputStreamReader(System.in));
         this.keyValueStore = new KeyValueStore(DB_DIRECTORY);
-        this.keyValueStore.rebuild();
     }
 
     public void start() throws IOException {

@@ -13,7 +13,6 @@ import java.util.Objects;
 
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 
 public class KeyValueStoreTest {
     private static final String TEST_DIR = "test-dir";
@@ -38,7 +37,6 @@ public class KeyValueStoreTest {
         keyValueStore.set(key, value);
 
         String retrievedValue = keyValueStore.get(key);
-        assertNotNull(retrievedValue);
         assertEquals(value, retrievedValue);
     }
 
@@ -60,7 +58,6 @@ public class KeyValueStoreTest {
         keyValueStore.set(key, value);
 
         String retrievedValue = keyValueStore.get(key);
-        assertNotNull(retrievedValue);
         assertEquals(value, retrievedValue);
 
         keyValueStore.delete(key);
@@ -68,5 +65,28 @@ public class KeyValueStoreTest {
         thrown.expect(KeyNotFoundException.class);
         thrown.expectMessage(startsWith(String.format("Key %s not present in the storage", key)));
         keyValueStore.get(key);
+    }
+
+    @Test
+    public void keyValueStore_rebuildSuccess() throws IOException, KeyNotFoundException {
+        KeyValueStore keyValueStore = new KeyValueStore(TEST_DIR);
+        String key = "A";
+        String value = "1";
+        keyValueStore.set(key, value);
+
+        String retrievedValue = keyValueStore.get(key);
+        assertEquals(value, retrievedValue);
+
+        // Remove the previous KeyValueStore instance and create a new instance which will trigger the rebuild
+        keyValueStore = new KeyValueStore(TEST_DIR);
+
+        retrievedValue = keyValueStore.get(key);
+        assertEquals(value, retrievedValue);
+
+        // As the key-value store is instantiated twice, 2 DB files should have been created. This is because a file is
+        // considered immutable once the DB connection is closed and a new file is created when the connection is
+        // re-established
+        int numberOfFiles = Objects.requireNonNull(new File(TEST_DIR).listFiles()).length;
+        assertEquals(2, numberOfFiles);
     }
 }

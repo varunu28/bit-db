@@ -1,12 +1,13 @@
 package com.varun.db.storage;
 
+import com.google.common.primitives.Ints;
 import com.varun.db.exception.KeyNotFoundException;
 import com.varun.db.util.DiskWriter;
+import com.varun.db.util.DiskWriterResponse;
 import com.varun.db.util.FileSystemUtil;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -28,6 +29,7 @@ public class KeyValueStore {
         this.cache = new HashMap<>();
         this.keyToValueMetadata = new HashMap<>();
         FileSystemUtil.createFileIfNotExists(dbDirectory, true);
+        rebuild();
         this.diskWriter = new DiskWriter(this.dbDirectory);
     }
 
@@ -40,21 +42,6 @@ public class KeyValueStore {
             return (int) (l2 - l1);
         });
         return files;
-    }
-
-    public void set(String key, String value) throws IOException {
-        FileRecord fileRecord = new FileRecord(
-                /* timestamp= */ System.currentTimeMillis(),
-                /* keySize= */ key.getBytes().length,
-                /* valSize= */ value.getBytes().length,
-                key,
-                value);
-
-        // We remove the key from cache if it is present. Cache is populated only during the get path.
-        this.cache.remove(key);
-
-        String fileName = this.diskWriter.persistToDisk(fileRecord.toBytes());
-        this.keyToValueMetadata.put(key, buildValueMetadata(fileRecord, fileName));
     }
 
     public String get(String key) throws KeyNotFoundException, IOException {
@@ -73,6 +60,22 @@ public class KeyValueStore {
         return value;
     }
 
+    public void set(String key, String value) throws IOException {
+        FileRecord fileRecord = new FileRecord(
+                /* timestamp= */ System.currentTimeMillis(),
+                /* keySize= */ key.getBytes().length,
+                /* valSize= */ value.getBytes().length,
+                key,
+                value);
+
+        // We remove the key from cache if it is present. Cache is populated only during the get path.
+        this.cache.remove(key);
+
+        DiskWriterResponse diskWriterResponse = this.diskWriter.persistToDisk(fileRecord);
+        this.keyToValueMetadata.put(key,
+                buildValueMetadata(fileRecord, diskWriterResponse.fileName(), diskWriterResponse.valuePosition()));
+    }
+
     public void delete(String key) throws KeyNotFoundException, IOException {
         if (!keyToValueMetadata.containsKey(key)) {
             throw new KeyNotFoundException(String.format("Key %s not present in the storage", key));
@@ -83,11 +86,11 @@ public class KeyValueStore {
                 /* keySize= */ key.getBytes().length,
                 /* valSize= */ TOMBSTONE_VALUE.getBytes().length,
                 key,
-                TOMBSTONE_VALUE).toBytes());
+                TOMBSTONE_VALUE));
         this.keyToValueMetadata.remove(key);
     }
 
-    public void rebuild() throws IOException {
+    private void rebuild() throws IOException {
         File[] files = getFilesSortedByCreationTime(dbDirectory);
         for (File file : files) {
             processFile(file);
@@ -95,18 +98,33 @@ public class KeyValueStore {
     }
 
     private void processFile(File file) throws IOException {
-        BufferedReader reader = new BufferedReader(new FileReader(file));
-        String line;
-        while (!(line = reader.readLine()).isEmpty()) {
-            FileRecord fileRecord = FileRecord.buildFileRecord(line.getBytes());
+        byte[] bytes = new byte[(int) file.length()];
+        try (FileInputStream inputStream = new FileInputStream(file)) {
+            inputStream.read(bytes);
+        }
+        int byteCursor = 0;
+        while (byteCursor < bytes.length) {
+            int recordSize = Ints.fromByteArray(Arrays.copyOfRange(bytes, byteCursor, byteCursor + 4));
+            byteCursor += 4;
+            byte[] record = Arrays.copyOfRange(bytes, byteCursor, byteCursor + recordSize);
+            FileRecord fileRecord = FileRecord.buildFileRecord(record);
+            int valuePosition = (
+                    byteCursor +
+                            /* timestamp */ 8 +
+                            /* key size */ 4 +
+                            /* value size */ 4 +
+                            /* key */ fileRecord.key().getBytes().length
+            );
             if (!keyToValueMetadata.containsKey(fileRecord.key())) {
-                keyToValueMetadata.put(fileRecord.key(), buildValueMetadata(fileRecord, file.getName()));
+                keyToValueMetadata.put(fileRecord.key(),
+                        buildValueMetadata(fileRecord, file.getPath(), valuePosition));
             }
+            byteCursor += recordSize;
         }
     }
 
-    private ValueMetadata buildValueMetadata(FileRecord fileRecord, String fileName) {
-        return new ValueMetadata(fileName, fileRecord.valueSize(), fileRecord.getValuePosition(), fileRecord.timestamp());
+    private ValueMetadata buildValueMetadata(FileRecord fileRecord, String fileName, int valuePosition) {
+        return new ValueMetadata(fileName, fileRecord.valueSize(), valuePosition, fileRecord.timestamp());
     }
 
     private record ValueMetadata(String fileId, int valueSize, int valuePosition, long timestamp) {
