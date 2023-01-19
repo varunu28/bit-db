@@ -89,4 +89,29 @@ public class KeyValueStoreTest {
         int numberOfFiles = Objects.requireNonNull(new File(TEST_DIR).listFiles()).length;
         assertEquals(2, numberOfFiles);
     }
+
+    @Test
+    public void keyValueStore_compactionSuccess() throws IOException, KeyNotFoundException, InterruptedException {
+        KeyValueStore keyValueStore = new KeyValueStore(TEST_DIR);
+        keyValueStore.set("A", "1");
+        sleep();
+        keyValueStore = new KeyValueStore(TEST_DIR);
+        keyValueStore.set("A", "2");
+        sleep();
+        keyValueStore = new KeyValueStore(TEST_DIR);
+        keyValueStore.set("A", "3");
+        sleep();
+        keyValueStore = new KeyValueStore(TEST_DIR);
+
+        keyValueStore.performCompaction();
+
+        assertEquals(2, Objects.requireNonNull(new File(TEST_DIR).listFiles()).length);
+
+        String retrievedValue = keyValueStore.get("A");
+        assertEquals("3", retrievedValue);
+    }
+
+    private void sleep() throws InterruptedException {
+        Thread.sleep(100L);
+    }
 }
