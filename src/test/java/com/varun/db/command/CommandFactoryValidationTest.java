@@ -27,14 +27,6 @@ public class CommandFactoryValidationTest {
         this.errorMessage = errorMessage;
     }
 
-    @Test
-    public void invalidInputValidation_success() throws InvalidCommandException {
-        thrown.expect(InvalidCommandException.class);
-        thrown.expectMessage(startsWith(errorMessage));
-
-        CommandFactory.parseCommand(invalidInput);
-    }
-
     @Parameters
     public static Collection commandFactoryInputs() {
         return Arrays.asList(new String[][]{
@@ -49,5 +41,13 @@ public class CommandFactoryValidationTest {
                 {"    DEL A 6   ", "GET/DEL operation should not contain parameters in addition to key"},
                 {"    UPDATE    ", "Operation not supported"},
         });
+    }
+
+    @Test
+    public void invalidInputValidation_success() throws InvalidCommandException {
+        thrown.expect(InvalidCommandException.class);
+        thrown.expectMessage(startsWith(errorMessage));
+
+        CommandFactory.parseCommand(invalidInput);
     }
 }

@@ -76,9 +76,26 @@ public class KeyValueStore {
         this.keyToValueMetadata.remove(key);
     }
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     private static File[] getFilesSortedByCreationTime(String dbDirectory, boolean desc) {
         File directory = new File(dbDirectory);
         File[] files = directory.listFiles();
+        Optional<String> compactedFileName = Arrays.stream(Objects.requireNonNull(files))
+                .map(File::getPath)
+                .filter(path -> path.endsWith("#"))
+                .findFirst();
+        if (compactedFileName.isPresent()) {
+            File compactedFile = new File(compactedFileName.get());
+            String nameWithoutPrefix = compactedFileName.get().substring(0, compactedFileName.get().length() - 1);
+            if (Arrays.stream(files)
+                    .map(File::getPath)
+                    .anyMatch(path -> path.equals(nameWithoutPrefix))) {
+                compactedFile.delete();
+            } else {
+                File renamedFileWithoutSuffix = new File(nameWithoutPrefix);
+                compactedFile.renameTo(renamedFileWithoutSuffix);
+            }
+        }
         Arrays.sort(Objects.requireNonNull(files), (o1, o2) -> {
             long l1 = Long.parseLong(o1.getName().split("_")[1]);
             long l2 = Long.parseLong(o2.getName().split("_")[1]);
@@ -175,6 +192,7 @@ public class KeyValueStore {
         processFileAndReturnKeyValueMapping(file, keyToValueMetadata);
     }
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     private Map<String, String> processFileAndReturnKeyValueMapping(File file, Map<String, ValueMetadata> keyToValueMetadata) throws IOException {
         Map<String, String> keyToValueMapping = new HashMap<>();
         byte[] bytes = new byte[(int) file.length()];
