@@ -9,6 +9,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import static com.varun.db.util.FileRecordConfig.DB_DIRECTORY;
 
@@ -26,6 +29,15 @@ public class DbServer {
     }
 
     public void start() throws IOException {
+        // Background compaction process
+        ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
+        scheduledExecutorService.scheduleAtFixedRate(() -> {
+            try {
+                keyValueStore.performCompaction();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }, 5, 5, TimeUnit.SECONDS);
         try (ServerSocket ignored = new ServerSocket(port)) {
             while (true) {
                 String input = reader.readLine();
