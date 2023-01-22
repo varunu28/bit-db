@@ -42,6 +42,11 @@ public class DiskWriter {
         return new DiskWriterResponse(file.getPath(), valuePosition);
     }
 
+    public DiskWriterResponse persistToDiskForActiveFile(FileRecord fileRecord) throws IOException {
+        checkFileMemory();
+        return persistToDiskForFile(fileRecord, file);
+    }
+
     private void checkFileMemory() {
         if (file.length() >= FILE_MEMORY_THRESHOLD) {
             createNewFile(dbDirectory);
@@ -50,10 +55,5 @@ public class DiskWriter {
 
     private void createNewFile(String dbDirectory) {
         this.file = new File(dbDirectory + "/" + FILE_PREFIX + System.currentTimeMillis());
-    }
-
-    public DiskWriterResponse persistToDiskForActiveFile(FileRecord fileRecord) throws IOException {
-        checkFileMemory();
-        return persistToDiskForFile(fileRecord, file);
     }
 }
