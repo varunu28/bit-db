@@ -57,7 +57,7 @@ public class KeyValueStore {
         // We remove the key from cache if it is present. Cache is populated only during the get path.
         this.cache.remove(key);
 
-        DiskWriterResponse diskWriterResponse = this.diskWriter.persistToDisk(fileRecord);
+        DiskWriterResponse diskWriterResponse = this.diskWriter.persistToDiskForActiveFile(fileRecord);
         this.keyToValueMetadata.put(key,
                 buildValueMetadata(fileRecord, diskWriterResponse.fileName(), diskWriterResponse.valuePosition()));
     }
@@ -67,7 +67,7 @@ public class KeyValueStore {
             throw new KeyNotFoundException(String.format("Key %s not present in the storage", key));
         }
         this.cache.remove(key);
-        this.diskWriter.persistToDisk(new FileRecord(
+        this.diskWriter.persistToDiskForActiveFile(new FileRecord(
                 /* timestamp= */ System.currentTimeMillis(),
                 /* keySize= */ key.getBytes().length,
                 /* valSize= */ TOMBSTONE_VALUE.getBytes().length,
@@ -164,7 +164,7 @@ public class KeyValueStore {
                     entry.getKey(),
                     keyToValueMapping.get(entry.getKey())
             );
-            DiskWriter.persistToDiskHelper(fileRecord, compactedFile);
+            DiskWriter.persistToDiskForFile(fileRecord, compactedFile);
         }
         // Delete the listed files
         filesToCompact.forEach(File::delete);

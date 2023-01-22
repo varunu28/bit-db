@@ -23,7 +23,7 @@ public class DiskWriter {
         this.file.createNewFile();
     }
 
-    public static DiskWriterResponse persistToDiskHelper(FileRecord fileRecord, File file) throws IOException {
+    public static DiskWriterResponse persistToDiskForFile(FileRecord fileRecord, File file) throws IOException {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         byte[] fileRecordBytes = fileRecord.toBytes();
         outputStream.write(Ints.toByteArray(fileRecordBytes.length));
@@ -52,8 +52,8 @@ public class DiskWriter {
         this.file = new File(dbDirectory + "/" + FILE_PREFIX + System.currentTimeMillis());
     }
 
-    public DiskWriterResponse persistToDisk(FileRecord fileRecord) throws IOException {
+    public DiskWriterResponse persistToDiskForActiveFile(FileRecord fileRecord) throws IOException {
         checkFileMemory();
-        return persistToDiskHelper(fileRecord, file);
+        return persistToDiskForFile(fileRecord, file);
     }
 }
